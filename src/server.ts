@@ -170,9 +170,18 @@ const findAndPostCurrentSong = (metadata, openDJslots, djs) => {
               })
               .then((response: any) => {
                 // link this thread in the topic
+                console.log("response", response);
                 slackClient.conversations.setTopic({
                   channel: SLACK_CHANNEL_ID,
-                  topic: `<https://turntable.fm/${ROOMID}|Shared Music Room> <${response}`,
+                  topic: `<https://turntable.fm/${ROOMID}|Shared Music Room> | ${
+                    ""
+                    // lin to this thread
+                    // e.g. https://app.slack.com/client/T05DP0D7PUL/C05DLH4N49G/thread/C05DLH4N49G-1687797420.716249
+                  } <https://app.slack.com/client/${
+                    response.message.team
+                  }/${SLACK_CHANNEL_ID}/thread/${
+                    response.ts
+                  }|Current Song Thread>`,
                 });
 
                 // post current playing in this Thread
