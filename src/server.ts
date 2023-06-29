@@ -9,7 +9,7 @@ const { AUTH, USERID, ROOMID, SLACK_BOT_TOKEN, SLACK_CHANNEL_ID } = process.env;
 
 const slackClient = new SlackAPIClient(SLACK_BOT_TOKEN);
 
-const bot = new Bot(AUTH, USERID, ROOMID);
+const bot: any = new Bot(AUTH, USERID, ROOMID);
 
 const commands = {
   "/hello": {
@@ -136,65 +136,84 @@ const postCurrentMessage = (
   });
 };
 
-const findAndPostCurrentSong = (metadata, openDJslots, djs) => {
-  slackClient.conversations.list().then((response: any) => {
-    const { channels } = response;
-    const channel = channels.find(
-      (channel: any) => channel.id === SLACK_CHANNEL_ID
-    );
-    if (channel) {
-      slackClient.conversations
-        .history({
-          channel: SLACK_CHANNEL_ID,
-          limit: 50,
-        })
-        .then((response: any) => {
-          // find any message posted today that has Turntable.fm song thread in it
-          const { messages } = response;
-          const today = new Date();
-          const todayString = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
-          const todayStringRegex = new RegExp(todayString);
-          const todaysMessage = messages.find(
-            (message: any) =>
-              message.text.match(/Current Song Thread for/) &&
-              message.text.match(todayStringRegex)
-          );
-          if (todaysMessage) {
-            // reply to the message with the current DJs and songs
-            postCurrentMessage(metadata, openDJslots, djs, todaysMessage.ts);
-          } else {
-            slackClient.chat
-              .postMessage({
-                channel: SLACK_CHANNEL_ID,
-                text: `<https://turntable.fm/${ROOMID}|Shared Music Room> Current Song Thread for ${todayString} :thread:`,
-              })
-              .then((response: any) => {
-                // link this thread in the topic
-                console.log("response", response);
-                slackClient.conversations.setTopic({
+const findAndPostCurrentSong = (
+  metadata: any,
+  openDJslots: any,
+  djs: any,
+  cursor?: any
+) => {
+  slackClient.conversations
+    .list({
+      types: "public_channel,private_channel",
+      cursor: cursor ? cursor : undefined,
+    })
+    .then((response: any) => {
+      console.log("conversations", response);
+      const { channels } = response;
+      const channel = channels.find(
+        (channel: any) => channel.id === SLACK_CHANNEL_ID
+      );
+      console.log("channel", channel, SLACK_CHANNEL_ID);
+      if (channel) {
+        slackClient.conversations
+          .history({
+            channel: SLACK_CHANNEL_ID,
+            limit: 50,
+          })
+          .then((response: any) => {
+            // find any message posted today that has Turntable.fm song thread in it
+            const { messages } = response;
+            const today = new Date();
+            const todayString = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+            const todayStringRegex = new RegExp(todayString);
+            const todaysMessage = messages.find(
+              (message: any) =>
+                message.text.match(/Current Song Thread for/) &&
+                message.text.match(todayStringRegex)
+            );
+            if (todaysMessage) {
+              // reply to the message with the current DJs and songs
+              postCurrentMessage(metadata, openDJslots, djs, todaysMessage.ts);
+            } else {
+              slackClient.chat
+                .postMessage({
                   channel: SLACK_CHANNEL_ID,
-                  topic: `<https://turntable.fm/${ROOMID}|Shared Music Room> | ${
-                    ""
-                    // lin to this thread
-                    // e.g. https://app.slack.com/client/T05DP0D7PUL/C05DLH4N49G/thread/C05DLH4N49G-1687797420.716249
-                  } <https://app.slack.com/client/${
-                    response.message.team
-                  }/${SLACK_CHANNEL_ID}/thread/${
-                    response.ts
-                  }|Current Song Thread>`,
-                });
+                  text: `<https://turntable.fm/${ROOMID}|Shared Music Room> Current Song Thread for ${todayString} :thread:`,
+                })
+                .then((response: any) => {
+                  // link this thread in the topic
+                  console.log("response", response);
+                  slackClient.conversations.setTopic({
+                    channel: SLACK_CHANNEL_ID,
+                    topic: `<https://turntable.fm/${ROOMID}|Shared Music Room> | ${
+                      ""
+                      // lin to this thread
+                      // e.g. https://app.slack.com/client/T05DP0D7PUL/C05DLH4N49G/thread/C05DLH4N49G-1687797420.716249
+                    } <https://app.slack.com/client/${
+                      response.message.team
+                    }/${SLACK_CHANNEL_ID}/thread/${
+                      response.ts
+                    }|Current Song Thread>`,
+                  });
 
-                // post current playing in this Thread
-                postCurrentMessage(metadata, openDJslots, djs, response.ts);
-              });
-          }
-        });
-    }
-  });
+                  // post current playing in this Thread
+                  postCurrentMessage(metadata, openDJslots, djs, response.ts);
+                });
+            }
+          });
+      } else if (response.response_metadata.next_cursor) {
+        findAndPostCurrentSong(
+          metadata,
+          openDJslots,
+          djs,
+          response.response_metadata.next_cursor
+        );
+      }
+    });
 };
 
 const collectRoomInfoAndUpdateSlack = () => {
-  bot.roomInfo(true, function (data) {
+  bot.roomInfo(true, function (data: any) {
     const {
       room: { metadata },
     } = data;
@@ -215,13 +234,13 @@ const collectRoomInfoAndUpdateSlack = () => {
   });
 };
 
-bot.on("ready", function (data) {
+bot.on("ready", function (data: any) {
   bot.roomRegister(ROOMID, function () {
     bot.setAsBot();
     collectRoomInfoAndUpdateSlack();
   });
 
-  bot.on("speak", function (data) {
+  bot.on("speak", function (data: any) {
     // respond to any command in the commands object
     if (data.text.match(/^\/[a-z]+$/)) {
       const command = data.text.split(" ")[0] as string;
@@ -230,19 +249,19 @@ bot.on("ready", function (data) {
       }
     }
   });
-  bot.on("newsong", function (data) {
+  bot.on("newsong", function (data: any) {
     console.log("newsong", data);
     bot.bop();
     collectRoomInfoAndUpdateSlack();
   });
-  bot.on("nosong", function (data) {
+  bot.on("nosong", function (data: any) {
     console.log("nosong", data);
   });
-  bot.on("add_dj", function (data) {
+  bot.on("add_dj", function (data: any) {
     console.log("add_dj", data);
     collectRoomInfoAndUpdateSlack();
   });
-  bot.on("rem_dj", function (data) {
+  bot.on("rem_dj", function (data: any) {
     console.log("rem_dj", data);
     collectRoomInfoAndUpdateSlack();
   });

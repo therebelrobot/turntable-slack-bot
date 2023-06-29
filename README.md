@@ -16,19 +16,24 @@ The following manifest can be used to duplicate the necessary permissions in htt
 
 ```yml
 display_information:
-  name: Name of your bot
+  name: Your Turntable Bot
+  description: turntable.fm integration
+  background_color: "#000000"
 features:
   bot_user:
-    display_name: Name of your bot
+    display_name: Your Turntable Bot
     always_online: false
 oauth_config:
   scopes:
     bot:
+      - channels:history
       - channels:read
       - channels:write.topic
       - chat:write
       - incoming-webhook
-      - channels:history
+      - groups:read
+      - groups:history
+      - groups:write.topic
 settings:
   org_deploy_enabled: false
   socket_mode_enabled: false
